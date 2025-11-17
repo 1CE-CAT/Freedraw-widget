@@ -46,8 +46,8 @@ export default function App() {
 
   return (
     <div className="d-flex flex-column gap-2 p-2">
-      <h1>Tools</h1>
-      <div className="d-flex gap-2 align-items-center ">
+      <h1 className="tools">Tools</h1>
+      <div className="buttons_for_canvas">
         <label htmlFor="color">Stroke color</label>
         <input
           type="color"
@@ -105,11 +105,14 @@ export default function App() {
           onChange={handleEraserWidthChange}
         />
       </div>
-      <button onClick={handleClearCanvas}>
+      <button className="clear" onClick={handleClearCanvas}>
         Очистить canvas
       </button>
       <h1>Canvas</h1>
       <ReactSketchCanvas
+        className="canvas-container"
+        width="1920px"
+        height="1080px"
         ref={canvasRef}
         strokeColor={strokeColor}
         canvasColor={canvasColor}
