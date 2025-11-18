@@ -2,118 +2,132 @@ import {
   ReactSketchCanvas,
   type ReactSketchCanvasRef,
 } from "react-sketch-canvas";
-import { type ChangeEvent, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
-export default function App() {
+const App = ({ data }: any) => {
   const canvasRef = useRef<ReactSketchCanvasRef>(null);
+
   const [eraseMode, setEraseMode] = useState(false);
   const [strokeWidth, setStrokeWidth] = useState(5);
   const [eraserWidth, setEraserWidth] = useState(10);
   const [strokeColor, setStrokeColor] = useState("#000000");
   const [canvasColor, setCanvasColor] = useState("#ffffff");
+  const [isLocked, setIsLocked] = useState(false);
 
   const handleEraserClick = () => {
+    if (!isLocked) return;
     setEraseMode(true);
     canvasRef.current?.eraseMode(true);
   };
 
   const handlePenClick = () => {
+    if (!isLocked) return;
     setEraseMode(false);
     canvasRef.current?.eraseMode(false);
   };
 
-  const handleStrokeWidthChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setStrokeWidth(+event.target.value);
-  };
-
-  const handleEraserWidthChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setEraserWidth(+event.target.value);
-  };
-
-  const handleStrokeColorChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setStrokeColor(event.target.value);
-  };
-
-  const handleCanvasColorChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setCanvasColor(event.target.value);
-  };
-
-  const handleClearCanvas = () => {
-    if (canvasRef.current) {
-      canvasRef.current.clearCanvas();
-    }
+  const handleLockToggle = () => {
+    const newLockedState = !isLocked;
+    setIsLocked(newLockedState);
+    data?.onLockToggle?.(newLockedState);
   };
 
   return (
-    <div className="d-flex flex-column gap-2 p-2">
-      <h1 className="tools">Tools</h1>
-      <div className="buttons_for_canvas">
-        <label htmlFor="color">Stroke color</label>
+    <div
+      style={{
+        width: "400px",
+        height: "300px",
+
+        // ← ReactFlow перестает взаимодействовать только здесь
+        pointerEvents: "none",    
+      }}
+    >
+      <div 
+        style={{ 
+          pointerEvents: "auto",
+          userSelect: "none"
+        }}
+      >
+        <button
+          type="button"
+          onClick={handleLockToggle}
+        >
+          {isLocked ? "Fixed" : "Move"}
+        </button>
+
+        <label>Stroke color</label>
         <input
           type="color"
           value={strokeColor}
-          onChange={handleStrokeColorChange}
+          onChange={(e) => setStrokeColor(e.target.value)}
+          disabled={!isLocked}
         />
-        <label htmlFor="color">Canvas color</label>
+
+        <label>Canvas color</label>
         <input
           type="color"
           value={canvasColor}
-          onChange={handleCanvasColorChange}
+          onChange={(e) => setCanvasColor(e.target.value)}
+          disabled={!isLocked}
         />
-        <button
-          type="button"
-          className="btn btn-sm btn-outline-primary"
-          disabled={!eraseMode}
-          onClick={handlePenClick}
-        >
+
+        <button disabled={!eraseMode || !isLocked} onClick={handlePenClick}>
           Pen
         </button>
-        <button
-          type="button"
-          className="btn btn-sm btn-outline-primary"
-          disabled={eraseMode}
-          onClick={handleEraserClick}
-        >
+
+        <button disabled={eraseMode || !isLocked} onClick={handleEraserClick}>
           Eraser
         </button>
-        <label htmlFor="strokeWidth" className="form-label">
-          Stroke width
-        </label>
+
+        <label>Stroke width</label>
         <input
-          disabled={eraseMode}
+          disabled={eraseMode || !isLocked}
           type="range"
-          className="form-range"
           min="1"
           max="20"
-          step="1"
-          id="strokeWidth"
           value={strokeWidth}
-          onChange={handleStrokeWidthChange}
+          onChange={(e) => setStrokeWidth(+e.target.value)}
         />
-        <label htmlFor="eraserWidth" className="form-label">
-          Eraser width
-        </label>
+
+        <label>Eraser width</label>
         <input
-          disabled={!eraseMode}
+          disabled={!eraseMode || !isLocked}
           type="range"
-          className="form-range"
           min="1"
           max="20"
-          step="1"
-          id="eraserWidth"
           value={eraserWidth}
-          onChange={handleEraserWidthChange}
+          onChange={(e) => setEraserWidth(+e.target.value)}
         />
+
+        <button disabled={!isLocked} onClick={() => canvasRef.current?.undo()}>
+          Undo
+        </button>
+
+        <button disabled={!isLocked} onClick={() => canvasRef.current?.redo()}>
+          Redo
+        </button>
+
+        <button
+          disabled={!isLocked}
+          onClick={() => canvasRef.current?.clearCanvas()}
+        >
+          Очистить
+        </button>
       </div>
-      <button className="clear" onClick={handleClearCanvas}>
-        Очистить canvas
-      </button>
-      <h1>Canvas</h1>
+
       <ReactSketchCanvas
-        className="canvas-container"
-        width="1920px"
-        height="1080px"
         ref={canvasRef}
+        style={{
+          width: "100%",
+          height: "100%",
+          border: "1px solid #ccc",
+
+          // ← важно: холст принимает все события мыши
+          pointerEvents: "auto",
+
+          // курсор: рисовать/стирать
+          cursor: isLocked ? (eraseMode ? "cell" : "crosshair") : "grab",
+        }}
         strokeColor={strokeColor}
         canvasColor={canvasColor}
         eraserWidth={eraserWidth}
@@ -121,4 +135,6 @@ export default function App() {
       />
     </div>
   );
-}
+};
+
+export default App;

@@ -1,10 +1,18 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { ReactFlowProvider } from 'reactflow';
+import Board from './board';
+import App from './App'
+import 'reactflow/dist/style.css';
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+const root = ReactDOM.createRoot(
+  document.getElementById('root') as HTMLElement
+);
+
+root.render(
+  <React.StrictMode>
+    <ReactFlowProvider>
+      <Board />
+    </ReactFlowProvider>
+  </React.StrictMode>
+);
