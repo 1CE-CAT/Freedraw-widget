@@ -2,139 +2,171 @@ import {
   ReactSketchCanvas,
   type ReactSketchCanvasRef,
 } from "react-sketch-canvas";
-import { useRef, useState } from "react";
+import { type ChangeEvent, useRef, useState } from "react";
 
-const App = ({ data }: any) => {
+interface AppProps {
+  onCanvasMouseEnter?: () => void;
+  onCanvasMouseLeave?: () => void;
+  isDraggable?: boolean;
+}
+
+export default function App({ 
+  onCanvasMouseEnter, 
+  onCanvasMouseLeave, 
+  isDraggable = true 
+}: AppProps) {
   const canvasRef = useRef<ReactSketchCanvasRef>(null);
-
   const [eraseMode, setEraseMode] = useState(false);
   const [strokeWidth, setStrokeWidth] = useState(5);
   const [eraserWidth, setEraserWidth] = useState(10);
   const [strokeColor, setStrokeColor] = useState("#000000");
   const [canvasColor, setCanvasColor] = useState("#ffffff");
-  const [isLocked, setIsLocked] = useState(false);
+
+  const handleStrokeColorChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setStrokeColor(event.target.value);
+  };
+
+  const handleCanvasColorChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setCanvasColor(event.target.value);
+  };
 
   const handleEraserClick = () => {
-    if (!isLocked) return;
     setEraseMode(true);
     canvasRef.current?.eraseMode(true);
   };
 
   const handlePenClick = () => {
-    if (!isLocked) return;
     setEraseMode(false);
     canvasRef.current?.eraseMode(false);
   };
 
-  const handleLockToggle = () => {
-    const newLockedState = !isLocked;
-    setIsLocked(newLockedState);
-    data?.onLockToggle?.(newLockedState);
+  const handleStrokeWidthChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setStrokeWidth(+event.target.value);
+  };
+
+  const handleEraserWidthChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setEraserWidth(+event.target.value);
+  };
+
+  const handleUndoClick = () => {
+    canvasRef.current?.undo();
+  };
+
+  const handleRedoClick = () => {
+    canvasRef.current?.redo();
+  };
+
+  const handleClearClick = () => {
+    canvasRef.current?.clearCanvas();
   };
 
   return (
-    <div
-      style={{
-        width: "400px",
-        height: "300px",
-
-        // ← ReactFlow перестает взаимодействовать только здесь
-        pointerEvents: "none",    
-      }}
-    >
-      <div 
-        style={{ 
-          pointerEvents: "auto",
-          userSelect: "none"
-        }}
-      >
+    <div className="d-flex flex-column gap-2 p-2">
+      <h1>Tools</h1>
+      <div className="d-flex gap-2 align-items-center ">
+        <div className="vr" />
         <button
           type="button"
-          onClick={handleLockToggle}
+          className="btn btn-sm btn-outline-primary"
+          onClick={handleUndoClick}
         >
-          {isLocked ? "Fixed" : "Move"}
+          Undo
         </button>
-
-        <label>Stroke color</label>
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-primary"
+          onClick={handleRedoClick}
+        >
+          Redo
+        </button>
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-primary"
+          onClick={handleClearClick}
+        >
+          Clear
+        </button>
+        <label htmlFor="color">Stroke color</label>
         <input
           type="color"
           value={strokeColor}
-          onChange={(e) => setStrokeColor(e.target.value)}
-          disabled={!isLocked}
+          onChange={handleStrokeColorChange}
         />
-
-        <label>Canvas color</label>
+        <label htmlFor="color">Canvas color</label>
         <input
           type="color"
           value={canvasColor}
-          onChange={(e) => setCanvasColor(e.target.value)}
-          disabled={!isLocked}
+          onChange={handleCanvasColorChange}
         />
-
-        <button disabled={!eraseMode || !isLocked} onClick={handlePenClick}>
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-primary"
+          disabled={!eraseMode}
+          onClick={handlePenClick}
+        >
           Pen
         </button>
-
-        <button disabled={eraseMode || !isLocked} onClick={handleEraserClick}>
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-primary"
+          disabled={eraseMode}
+          onClick={handleEraserClick}
+        >
           Eraser
         </button>
-
-        <label>Stroke width</label>
+        <label htmlFor="strokeWidth" className="form-label">
+          Stroke width
+        </label>
         <input
-          disabled={eraseMode || !isLocked}
+          disabled={eraseMode}
           type="range"
+          className="form-range"
           min="1"
           max="20"
+          step="1"
+          id="strokeWidth"
           value={strokeWidth}
-          onChange={(e) => setStrokeWidth(+e.target.value)}
+          onChange={handleStrokeWidthChange}
         />
-
-        <label>Eraser width</label>
+        <label htmlFor="eraserWidth" className="form-label">
+          Eraser width
+        </label>
         <input
-          disabled={!eraseMode || !isLocked}
+          disabled={!eraseMode}
           type="range"
+          className="form-range"
           min="1"
           max="20"
+          step="1"
+          id="eraserWidth"
           value={eraserWidth}
-          onChange={(e) => setEraserWidth(+e.target.value)}
+          onChange={handleEraserWidthChange}
         />
-
-        <button disabled={!isLocked} onClick={() => canvasRef.current?.undo()}>
-          Undo
-        </button>
-
-        <button disabled={!isLocked} onClick={() => canvasRef.current?.redo()}>
-          Redo
-        </button>
-
-        <button
-          disabled={!isLocked}
-          onClick={() => canvasRef.current?.clearCanvas()}
-        >
-          Очистить
-        </button>
       </div>
-
-      <ReactSketchCanvas
-        ref={canvasRef}
+      <h1>Canvas</h1>
+      <div
+        onMouseEnter={onCanvasMouseEnter}
+        onMouseLeave={onCanvasMouseLeave}
         style={{
-          width: "100%",
-          height: "100%",
-          border: "1px solid #ccc",
-
-          // ← важно: холст принимает все события мыши
-          pointerEvents: "auto",
-
-          // курсор: рисовать/стирать
-          cursor: isLocked ? (eraseMode ? "cell" : "crosshair") : "grab",
+          pointerEvents: 'auto',
+          cursor: isDraggable ? 'default' : 'crosshair',
         }}
-        strokeColor={strokeColor}
-        canvasColor={canvasColor}
-        eraserWidth={eraserWidth}
-        strokeWidth={strokeWidth}
-      />
+      >
+        <ReactSketchCanvas
+          ref={canvasRef}
+          strokeWidth={strokeWidth}
+          strokeColor={strokeColor}
+          canvasColor={canvasColor}
+          eraserWidth={eraserWidth}
+          style={{
+            cursor: isDraggable ? 'default' : 'crosshair', 
+            border: '2px solid #000',
+            width: '100%',
+            height: '387px',
+            pointerEvents: 'auto',
+          }}
+        />
+      </div>
     </div>
   );
-};
-
-export default App;
+}

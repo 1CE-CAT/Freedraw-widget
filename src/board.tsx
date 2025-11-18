@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -9,78 +9,120 @@ import ReactFlow, {
   type Connection,
   type Edge,
   type Node,
-  type NodeTypes,
+  BackgroundVariant,
+  ReactFlowProvider,
 } from 'reactflow';
-import App from './App.tsx';
 import 'reactflow/dist/style.css';
 
-const nodeTypes: NodeTypes = {
-  drawing: App,
+import App from './App.tsx'; 
+
+type WidgetNodeData = {
+  // Убрано свойство label так как оно больше не используется
 };
 
-const initialNodes: Node[] = [];
+const WidgetNode = ({ data }: { data: WidgetNodeData }) => {
+  const [isOverCanvas, setIsOverCanvas] = useState(false);
 
-const initialEdges: Edge[] = [];
+  return (
+    <div style={{ 
+      width: 800, 
+      height: 600, 
+      border: '2px solid #ddd',
+      borderRadius: '8px',
+      backgroundColor: '#fff',
+      overflow: 'hidden'
+    }}>
+      {/* Область для перетаскивания - теперь без текста */}
+      <div 
+        style={{
+          height: '40px',
+          background: '#f0f0f0',
+          borderBottom: '1px solid #ddd',
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 10px',
+          cursor: isOverCanvas ? 'default' : 'move',
+        }}
+        className="react-flow__handle"
+      >
+        {/* Текст полностью убран */}
+      </div>
+      
+      <App 
+        onCanvasMouseEnter={() => setIsOverCanvas(true)}
+        onCanvasMouseLeave={() => setIsOverCanvas(false)}
+        isDraggable={!isOverCanvas}
+      />
+    </div>
+  );
+};
+
+const nodeTypes = {
+  widget: WidgetNode,
+};
 
 const Board: React.FC = () => {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [nodeIdCounter, setNodeIdCounter] = useState(1);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
+    (params: Connection | Edge) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
 
-  const addDrawingNode = useCallback(() => {
+  const addNewWidget = useCallback(() => {
     const newNode: Node = {
-      id: `drawing-${nodeIdCounter}`,
-      type: 'drawing',
+      id: `widget-${Date.now()}`,
+      type: 'widget',
+      data: {}, // Пустой объект данных
       position: { 
         x: Math.random() * 400, 
-        y: Math.random() * 400  
+        y: Math.random() * 400 
       },
-      data: { 
-        locked: false,
-        onLockToggle: (locked: boolean) => {
-          setNodes((nds) =>
-            nds.map((node) => {
-              if (node.id === `drawing-${nodeIdCounter}`) {
-                return {
-                  ...node,
-                  draggable: !locked,
-                };
-              }
-              return node;
-            })
-          );
-        }
+      style: {
+        width: 800,
+        height: 600,
       },
       draggable: true,
+      dragHandle: '.react-flow__handle',
     };
+    setNodes((nds) => [...nds, newNode]);
+  }, [setNodes]);
 
-    setNodes((nds) => nds.concat(newNode));
-    setNodeIdCounter((counter) => counter + 1);
-  }, [nodeIdCounter, setNodes]);
+  const nodeColor = (node: Node) => {
+    switch (node.type) {
+      case 'widget':
+        return '#007bff';
+      default:
+        return '#ccc';
+    }
+  };
 
   return (
-    <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
-      <button 
-        onClick={addDrawingNode}
-        style={{
-          position: 'absolute',
-          top: '10px',
-          left: '10px',
-          zIndex: 1000,
-          padding: '10px',
-          background: '#fff',
-          border: '1px solid #ccc',
-          borderRadius: '5px',
-          cursor: 'pointer'
-        }}
-      >
-        Добавить Drawing виджет
-      </button>
+    <div style={{ width: '100vw', height: '100vh' }}>
+      <div style={{ 
+        position: 'absolute', 
+        top: 10, 
+        left: 10, 
+        zIndex: 1000,
+        display: 'flex',
+        gap: '10px'
+      }}>
+        <button 
+          onClick={addNewWidget}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px'
+          }}
+        >
+          Добавить виджет
+        </button>
+      </div>
 
       <ReactFlow
         nodes={nodes}
@@ -90,13 +132,29 @@ const Board: React.FC = () => {
         onConnect={onConnect}
         nodeTypes={nodeTypes}
         fitView
+        attributionPosition="bottom-left"
       >
-        <MiniMap />
         <Controls />
-        <Background />
+        <MiniMap 
+          nodeColor={nodeColor}
+          nodeStrokeWidth={3}
+          zoomable
+          pannable
+        />
+        <Background 
+          variant={BackgroundVariant.Dots} 
+          gap={12} 
+          size={1} 
+        />
       </ReactFlow>
     </div>
   );
 };
 
-export default Board;
+const BoardWithProvider: React.FC = () => (
+  <ReactFlowProvider>
+    <Board />
+  </ReactFlowProvider>
+);
+
+export default BoardWithProvider;
